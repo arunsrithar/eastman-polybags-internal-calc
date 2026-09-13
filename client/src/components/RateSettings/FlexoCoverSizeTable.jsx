@@ -4,8 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../ui/Toast";
 import { compareDimensions } from "../../utils/dimensionUtils";
 import { PRINTING_COL_KEYS } from "./flexoSettingsConfig";
-import FlexoCompanyColumn from "./flexoCoverSize/FlexoCompanyColumn";
 import FlexoSizeListColumn from "./flexoCoverSize/FlexoSizeListColumn";
+import FlexoCompanyColumn from "./flexoCoverSize/FlexoCompanyColumn";
 import FlexoRatesColumn from "./flexoCoverSize/FlexoRatesColumn";
 
 function buildDrafts(coverSize) {
@@ -36,48 +36,62 @@ export default function FlexoCoverSizeTable() {
   const canEdit = canEditPrices("flexo");
   const [toast, showToast] = useToast();
 
+  const [selectedSize, setSelectedSize] = useState(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
-  const [selectedCoverSizeId, setSelectedCoverSizeId] = useState(null);
   const [addingSize, setAddingSize] = useState(false);
   const [widthInput, setWidthInput] = useState("");
   const [heightInput, setHeightInput] = useState("");
+  const [addCompanyId, setAddCompanyId] = useState(null);
   const [rateDrafts, setRateDrafts] = useState({});
 
   const activeCompanies = useMemo(
-    () => (companies ?? []).filter((company) => company.isActive !== false),
+    () => (companies ?? []).filter((c) => c.isActive !== false),
     [companies],
   );
 
-  const selectedCompany = useMemo(() => {
-    if (!activeCompanies.length) return null;
-    return (
-      activeCompanies.find((company) => company.id === selectedCompanyId) ??
-      activeCompanies[0]
-    );
-  }, [activeCompanies, selectedCompanyId]);
+  useEffect(() => {
+    for (const c of activeCompanies) {
+      fetchCompanyCoverSizes(c.id);
+    }
+  }, [activeCompanies, fetchCompanyCoverSizes]);
+
+  const distinctSizes = useMemo(() => {
+    const sizeSet = new Set();
+    for (const compId of Object.keys(companyCoverSizes)) {
+      for (const cs of companyCoverSizes[compId] ?? []) {
+        sizeSet.add(cs.coverSize);
+      }
+    }
+    return [...sizeSet].sort(compareDimensions);
+  }, [companyCoverSizes]);
+
+  const companiesForSize = useMemo(() => {
+    if (!selectedSize) return [];
+    const result = [];
+    for (const company of activeCompanies) {
+      const csEntries = companyCoverSizes[company.id] ?? [];
+      const entry = csEntries.find((cs) => cs.coverSize === selectedSize);
+      if (entry) {
+        result.push({ company, coverSizeEntry: entry });
+      }
+    }
+    return result;
+  }, [selectedSize, activeCompanies, companyCoverSizes]);
+
+  const unassignedCompanies = useMemo(() => {
+    if (!selectedSize) return [];
+    const assignedIds = new Set(companiesForSize.map((c) => c.company.id));
+    return activeCompanies.filter((c) => !assignedIds.has(c.id));
+  }, [selectedSize, companiesForSize, activeCompanies]);
+
+  const selectedEntry = useMemo(() => {
+    if (!selectedCompanyId || !selectedSize) return null;
+    return companiesForSize.find((c) => c.company.id === selectedCompanyId)?.coverSizeEntry ?? null;
+  }, [selectedCompanyId, selectedSize, companiesForSize]);
 
   useEffect(() => {
-    if (selectedCompany) fetchCompanyCoverSizes(selectedCompany.id);
-  }, [selectedCompany, fetchCompanyCoverSizes]);
-
-  const coverSizes = useMemo(() => {
-    if (!selectedCompany) return [];
-    return [...(companyCoverSizes[selectedCompany.id] ?? [])].sort((a, b) =>
-      compareDimensions(a.coverSize, b.coverSize),
-    );
-  }, [companyCoverSizes, selectedCompany]);
-
-  const selectedCoverSize = useMemo(() => {
-    if (!coverSizes.length) return null;
-    return (
-      coverSizes.find((cs) => cs.id === selectedCoverSizeId) ?? coverSizes[0]
-    );
-  }, [coverSizes, selectedCoverSizeId]);
-
-  // Reseed the price inputs whenever the selected size (or its saved rates) change
-  useEffect(() => {
-    setRateDrafts(buildDrafts(selectedCoverSize));
-  }, [selectedCoverSize]);
+    setRateDrafts(buildDrafts(selectedEntry));
+  }, [selectedEntry]);
 
   function closeAddSize() {
     setAddingSize(false);
@@ -88,14 +102,15 @@ export default function FlexoCoverSizeTable() {
   async function handleAddSize() {
     const width = widthInput.trim();
     const height = heightInput.trim();
-    if (!selectedCompany || !canEdit || !width || !height) return;
+    if (!canEdit || !width || !height) return;
     const coverSize = `${width}x${height}`;
+    const companyToAssign = addCompanyId ?? activeCompanies[0]?.id;
+    if (!companyToAssign) return;
     try {
-      await addCompanyCoverSize(selectedCompany.id, coverSize);
-      showToast(
-        "Cover Size Added",
-        `"${width} x ${height}" added for ${selectedCompany.name}`,
-      );
+      await addCompanyCoverSize(companyToAssign, coverSize);
+      showToast("Cover Size Added", `"${width} x ${height}" added`);
+      setSelectedSize(coverSize);
+      setSelectedCompanyId(companyToAssign);
       closeAddSize();
     } catch (err) {
       showToast("Failed to Add", err.message, "error");
@@ -113,33 +128,45 @@ export default function FlexoCoverSizeTable() {
     }
   }
 
-  async function handleDeleteSize(coverSizeId) {
-    if (!selectedCompany || !canEdit) return;
+  async function handleAddCompanyToSize(companyId) {
+    if (!selectedSize || !canEdit) return;
     try {
-      await deleteCompanyCoverSize(selectedCompany.id, coverSizeId);
-      showToast("Cover Size Deleted", "Cover size removed");
+      await addCompanyCoverSize(companyId, selectedSize);
+      setSelectedCompanyId(companyId);
+      showToast("Company Added", `Company assigned to ${selectedSize}`);
+    } catch (err) {
+      showToast("Failed to Add", err.message, "error");
+    }
+  }
+
+  async function handleDeleteCompanyFromSize(companyId) {
+    if (!selectedSize || !canEdit) return;
+    const entry = companiesForSize.find((c) => c.company.id === companyId)?.coverSizeEntry;
+    if (!entry) return;
+    try {
+      await deleteCompanyCoverSize(companyId, entry.id);
+      if (selectedCompanyId === companyId) setSelectedCompanyId(null);
+      showToast("Company Removed", "Company removed from this cover size");
     } catch (err) {
       showToast("Delete Failed", err.message, "error");
     }
   }
 
-  async function handleToggleSize(coverSizeId, enabled) {
-    if (!selectedCompany || !canEdit) return;
+  async function handleToggleCompany(companyId, enabled) {
+    if (!selectedSize || !canEdit) return;
+    const entry = companiesForSize.find((c) => c.company.id === companyId)?.coverSizeEntry;
+    if (!entry) return;
     try {
-      await toggleCompanyCoverSize(selectedCompany.id, coverSizeId, enabled);
+      await toggleCompanyCoverSize(companyId, entry.id, enabled);
     } catch (err) {
       showToast("Update Failed", err.message, "error");
     }
   }
 
   async function updateRate(patch) {
-    if (!selectedCompany || !selectedCoverSize || !canEdit) return;
+    if (!selectedCompanyId || !selectedEntry || !canEdit) return;
     try {
-      await updateCompanyCoverSizeRate(
-        selectedCompany.id,
-        selectedCoverSize.id,
-        patch,
-      );
+      await updateCompanyCoverSizeRate(selectedCompanyId, selectedEntry.id, patch);
     } catch (err) {
       showToast("Update Failed", err.message, "error");
     }
@@ -152,7 +179,7 @@ export default function FlexoCoverSizeTable() {
   async function handleCommitDraft(key, patch, rawValue) {
     const price = Number(rawValue);
     if (!Number.isFinite(price) || price < 0) {
-      setRateDrafts(buildDrafts(selectedCoverSize));
+      setRateDrafts(buildDrafts(selectedEntry));
       return;
     }
     await updateRate({ ...patch, price });
@@ -166,23 +193,14 @@ export default function FlexoCoverSizeTable() {
     <>
       {toast}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full min-h-0">
-        <FlexoCompanyColumn
-          companies={activeCompanies}
-          selectedCompanyId={selectedCompany?.id ?? null}
-          onSelectCompany={(companyId) => {
-            setSelectedCompanyId(companyId);
-            setSelectedCoverSizeId(null);
-          }}
-        />
-
         <FlexoSizeListColumn
           canEdit={canEdit}
-          selectedCompany={selectedCompany}
-          coverSizes={coverSizes}
-          selectedCoverSizeId={selectedCoverSize?.id ?? null}
-          onSelectCoverSize={setSelectedCoverSizeId}
-          onToggleCoverSize={handleToggleSize}
-          onDeleteCoverSize={handleDeleteSize}
+          coverSizes={distinctSizes}
+          selectedSize={selectedSize}
+          onSelectSize={(size) => {
+            setSelectedSize(size);
+            setSelectedCompanyId(null);
+          }}
           addingSize={addingSize}
           onStartAdd={() => setAddingSize(true)}
           widthInput={widthInput}
@@ -194,8 +212,22 @@ export default function FlexoCoverSizeTable() {
           onCancelAdd={closeAddSize}
         />
 
+        <FlexoCompanyColumn
+          selectedSize={selectedSize}
+          companiesForSize={companiesForSize}
+          unassignedCompanies={unassignedCompanies}
+          selectedCompanyId={selectedCompanyId}
+          onSelectCompany={setSelectedCompanyId}
+          onAddCompany={handleAddCompanyToSize}
+          onDeleteCompany={handleDeleteCompanyFromSize}
+          onToggleCompany={handleToggleCompany}
+          canEdit={canEdit}
+        />
+
         <FlexoRatesColumn
-          selectedCoverSize={selectedCoverSize}
+          selectedCoverSize={selectedEntry}
+          selectedCompanyName={companiesForSize.find((c) => c.company.id === selectedCompanyId)?.company?.name}
+          selectedSizeLabel={selectedSize}
           canEdit={canEdit}
           rateDrafts={rateDrafts}
           onChangeDraft={handleChangeDraft}

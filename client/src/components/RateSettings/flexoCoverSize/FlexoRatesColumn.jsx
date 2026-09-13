@@ -103,6 +103,8 @@ function PrintingMatrix({
 
 export default function FlexoRatesColumn({
   selectedCoverSize,
+  selectedCompanyName,
+  selectedSizeLabel,
   canEdit,
   rateDrafts,
   onChangeDraft,
@@ -145,15 +147,15 @@ export default function FlexoRatesColumn({
         <p className="text-sm font-semibold text-label">Rates</p>
         <p className="text-xs text-label-3 truncate">
           {selectedCoverSize
-            ? `Size: ${selectedCoverSize.coverSize}`
-            : "Select a cover size"}
+            ? `${selectedSizeLabel || selectedCoverSize.coverSize}${selectedCompanyName ? ` · ${selectedCompanyName}` : ""}`
+            : "Select a company"}
         </p>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
         {!selectedCoverSize ? (
           <div className="card-section text-sm text-label-3">
-            Pick a cover size to edit its rates
+            Pick a cover size and company to edit rates
           </div>
         ) : (
           <>
