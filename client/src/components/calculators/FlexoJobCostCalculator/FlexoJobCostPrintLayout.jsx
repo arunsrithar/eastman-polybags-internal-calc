@@ -1,7 +1,7 @@
 import { fmt, amountInWords } from "../../../utils/format";
 import { formatPrintDate } from "../../print/printTokens";
 import PrintInvoice from "../../print/PrintInvoice";
-import { visibleFlexoCompanyName } from "../FlexoRateCalculator/companyDisplay";
+import { CompanyIcon } from "../../ui/Icons";
 
 const FLAT_KEYS = new Set(["packingCharges", "transportCharges"]);
 
@@ -13,8 +13,8 @@ const displayPrintColours = (v) => (/^\d+$/.test(v ?? "") ? `${v} Colour` : v);
 
 const COMPANY_FIELD = {
   printing: "printingCompany",
-  gusset: "printingCompany",
-  cutting: "printingCompany",
+  gusset: "gussetCompany",
+  cutting: "cuttingCompany",
   opaque: "opackCompany",
   punching: "punchingCompany",
 };
@@ -28,7 +28,15 @@ const COMPANY_FIELD = {
 export default function FlexoJobCostPrintLayout({ result, form }) {
   if (!result) return null;
 
-  const { enabledItems, totalAmount, finishedWeight, dispatchWeight } = result;
+  const {
+    enabledItems,
+    totalAmount,
+    finishedWeight,
+    dispatchWeight,
+    taxPercent,
+    taxAmountPerKg,
+    costOfJobExclTax,
+  } = result;
 
   const roundedTotalAmount = Math.round(totalAmount || 0);
   const roundedTotalDisplay = roundedTotalAmount.toLocaleString("en-IN", {
@@ -38,6 +46,8 @@ export default function FlexoJobCostPrintLayout({ result, form }) {
 
   const costOfJob =
     dispatchWeight > 0 ? Math.round(roundedTotalAmount / dispatchWeight) : null;
+  const roundedTaxAmountPerKg = Math.round(taxAmountPerKg || 0);
+  const roundedCostOfJobExclTax = Math.round(costOfJobExclTax || 0);
   const costOfJobDisplay =
     costOfJob != null
       ? costOfJob.toLocaleString("en-IN", {
@@ -46,19 +56,27 @@ export default function FlexoJobCostPrintLayout({ result, form }) {
         })
       : null;
 
+  function companySubtitle(name) {
+    if (!name) return undefined;
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+        <CompanyIcon className="w-3 h-3" />
+        <span>{name}</span>
+      </span>
+    );
+  }
+
   /* ── Line items (exclude flat charges) ── */
   const items = enabledItems
     .filter((item) => !FLAT_KEYS.has(item.key))
-    .map((item) => {
-      const companyName = visibleFlexoCompanyName(form[COMPANY_FIELD[item.key]]);
-      return {
-        key: item.key,
-        label: companyName ? `${item.label} · ${companyName}` : item.label,
-        qty: item.hasQty && item.qty > 0 ? item.qty : null,
-        price: item.hasQty ? item.price : null,
-        amount: item.amount,
-      };
-    });
+    .map((item) => ({
+      key: item.key,
+      label: item.label,
+      subtitle: companySubtitle(form[COMPANY_FIELD[item.key]]),
+      qty: item.hasQty && item.qty > 0 ? item.qty : null,
+      price: item.hasQty ? item.price : null,
+      amount: item.amount,
+    }));
 
   /* ── Flat charges → adjustment rows ── */
   const flatItems = enabledItems.filter((item) => FLAT_KEYS.has(item.key));
@@ -148,6 +166,10 @@ export default function FlexoJobCostPrintLayout({ result, form }) {
       pricePerKgLabelIndent={46}
       pricePerKgWords={costOfJob != null ? amountInWords(costOfJob) : undefined}
       pricePerKgWordsProminent
+      taxPercent={taxPercent}
+      taxAmount={roundedTaxAmountPerKg}
+      exclusiveAmount={roundedCostOfJobExclTax}
+      exclusiveLabel="Exclusive of Tax (/Kg)"
       footerShowBoxes={false}
       footerShowCaption
     />

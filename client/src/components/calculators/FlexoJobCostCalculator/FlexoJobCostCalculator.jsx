@@ -25,6 +25,7 @@ export default function FlexoJobCostCalculator() {
     saveError,
     formRef,
     toast,
+    quoteId,
     handleFormChange,
     handleSave,
     handleReset,
@@ -65,6 +66,7 @@ export default function FlexoJobCostCalculator() {
             ref={formRef}
             onProceed={handleFormChange}
             saveError={saveError}
+            quoteId={quoteId}
           />
         </div>
 

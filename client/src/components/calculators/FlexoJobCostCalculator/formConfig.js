@@ -81,9 +81,12 @@ export function makeInitialForm(settings = null) {
     printColors: "",
     coverSize: "",
     printingCompany: DEFAULT_FLEXO_COMPANY_NAME,
+    gussetCompany: DEFAULT_FLEXO_COMPANY_NAME,
+    cuttingCompany: DEFAULT_FLEXO_COMPANY_NAME,
     punchingCompany: DEFAULT_FLEXO_COMPANY_NAME,
     opackCompany: DEFAULT_FLEXO_COMPANY_NAME,
     items,
+    tax: "18",
     finishedWeight: "",
     dispatchWeight: "",
   };

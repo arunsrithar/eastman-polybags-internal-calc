@@ -23,8 +23,8 @@ const PROCESSING_KEYS = new Set([
 
 const COMPANY_FIELD = {
   printing: "printingCompany",
-  gusset: "printingCompany",
-  cutting: "printingCompany",
+  gusset: "gussetCompany",
+  cutting: "cuttingCompany",
   opaque: "opackCompany",
   punching: "punchingCompany",
 };
@@ -69,7 +69,15 @@ export default function FlexoJobCostResult({ result, form, status, date }) {
     );
   }
 
-  const { enabledItems, totalAmount, finishedWeight, dispatchWeight } = result;
+  const {
+    enabledItems,
+    totalAmount,
+    finishedWeight,
+    dispatchWeight,
+    taxPercent,
+    taxAmountPerKg,
+    costOfJobExclTax,
+  } = result;
 
   const roundedTotal = Math.round(totalAmount);
   const breakdownCostOfJob =
@@ -179,6 +187,10 @@ export default function FlexoJobCostResult({ result, form, status, date }) {
             ? `₹${fmt(roundedTotal)} total ÷ ${fmt(dispatchWeight)} kg dispatch${finishedWeight > 0 ? ` · ${fmt(finishedWeight)} kg finished` : ""}`
             : "Enter dispatch weight to see cost per kg"
         }
+        taxPercent={taxPercent}
+        taxAmount={taxAmountPerKg}
+        exclusiveAmount={costOfJobExclTax}
+        exclusiveLabel="Exclusive of Tax (/kg)"
       />
     </div>
   );

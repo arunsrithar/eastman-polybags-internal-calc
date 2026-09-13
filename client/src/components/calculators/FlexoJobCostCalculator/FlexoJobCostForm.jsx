@@ -7,6 +7,7 @@ import SelectField from "../../form/SelectField";
 import RadioField from "../../form/RadioField";
 import DateField from "../../form/DateField";
 import CreatableSelect from "../../ui/CreatableSelect";
+import useCustomerNames from "../../../hooks/useCustomerNames";
 import ProcessTableRow from "../formRows/ProcessTableRow";
 import ChargeColumnHeader from "../formRows/ChargeColumnHeader";
 import { PROCESS_TABLE_GRID } from "../formRows/chargeRowGrid";
@@ -120,11 +121,12 @@ const PROCESSING_CHARGE_KEYS = [
 
 /* ─── FlexoJobCostForm ───────────────────────────────────────────────────── */
 export default forwardRef(function FlexoJobCostForm(
-  { onProceed, saveError = null },
+  { onProceed, saveError = null, quoteId = "" },
   ref,
 ) {
   const { settings, companies, companyCoverSizes, fetchCompanyCoverSizes } =
     useFlexoSettings();
+  const customerNames = useCustomerNames();
   const [form, setForm] = useState(() => makeInitialForm(settings));
 
   const pendingSyncRef = useRef(null);
@@ -140,6 +142,8 @@ export default forwardRef(function FlexoJobCostForm(
     companies,
     form.printingCompany,
   );
+  const gussetCompanyObj = findFlexoCompanyByName(companies, form.gussetCompany);
+  const cuttingCompanyObj = findFlexoCompanyByName(companies, form.cuttingCompany);
   const opackCompanyObj = findFlexoCompanyByName(companies, form.opackCompany);
   const punchingCompanyObj = findFlexoCompanyByName(
     companies,
@@ -155,8 +159,6 @@ export default forwardRef(function FlexoJobCostForm(
 
   const liveRollSizeOptions = getLiveRollSizeOptions(settings, form.materialType);
 
-  // Fetch cover sizes for the printing company — also the source for Gusset
-  // and Cutting rates, which are cover-size-scoped to that same company.
   useEffect(() => {
     if (!form.printingCompany) return;
     const company = findFlexoCompanyByName(companies, form.printingCompany);
@@ -164,6 +166,22 @@ export default forwardRef(function FlexoJobCostForm(
       fetchCompanyCoverSizes(company.id);
     }
   }, [form.printingCompany, companies, companyCoverSizes, fetchCompanyCoverSizes]);
+
+  useEffect(() => {
+    if (!form.gussetCompany) return;
+    const company = findFlexoCompanyByName(companies, form.gussetCompany);
+    if (company && !companyCoverSizes[company.id]) {
+      fetchCompanyCoverSizes(company.id);
+    }
+  }, [form.gussetCompany, companies, companyCoverSizes, fetchCompanyCoverSizes]);
+
+  useEffect(() => {
+    if (!form.cuttingCompany) return;
+    const company = findFlexoCompanyByName(companies, form.cuttingCompany);
+    if (company && !companyCoverSizes[company.id]) {
+      fetchCompanyCoverSizes(company.id);
+    }
+  }, [form.cuttingCompany, companies, companyCoverSizes, fetchCompanyCoverSizes]);
 
   // Auto-fill material price when materialType changes or settings load
   useEffect(() => {
@@ -200,10 +218,10 @@ export default forwardRef(function FlexoJobCostForm(
         ),
       ),
       gusset: String(
-        computeGussetPrice(form.coverSize, settings, printingCompanyObj, companyCoverSizes),
+        computeGussetPrice(form.coverSize, settings, gussetCompanyObj, companyCoverSizes),
       ),
       cutting: String(
-        computeCuttingPrice(form.coverSize, settings, printingCompanyObj, companyCoverSizes),
+        computeCuttingPrice(form.coverSize, settings, cuttingCompanyObj, companyCoverSizes),
       ),
       opaque: String(computeOpaquePrice(settings, opackCompanyObj)),
       punching: String(computePunchingPrice(settings, punchingCompanyObj)),
@@ -229,6 +247,8 @@ export default forwardRef(function FlexoJobCostForm(
     form.printColors,
     settings,
     printingCompanyObj,
+    gussetCompanyObj,
+    cuttingCompanyObj,
     opackCompanyObj,
     punchingCompanyObj,
     companyCoverSizes,
@@ -323,15 +343,27 @@ export default forwardRef(function FlexoJobCostForm(
 
   return (
     <FormStack>
-      {/* ── Customer & Quote Name ── */}
+      {/* ── Quote ID & Customer Name ── */}
       <FormSection>
         <TextField
-          label="Customer / Quote Name"
-          placeholder="e.g. Rajesh Traders"
-          value={form.quoteName}
-          onChange={(v) => setField("quoteName", v)}
-          error={saveError}
+          label="Quote ID"
+          value={quoteId}
+          disabled
+          placeholder="Auto-generated"
         />
+        <div>
+          <label className="text-xs font-medium text-label-2 mb-1 block">Customer Name</label>
+          <CreatableSelect
+            storageKey="customer-names"
+            defaultOptions={customerNames}
+            value={form.quoteName}
+            onChange={(v) => setField("quoteName", v)}
+            placeholder="e.g. Rajesh Traders"
+            creatable
+            persistOptions={false}
+          />
+          {saveError && <p className="text-xs text-red-500 mt-1">{saveError}</p>}
+        </div>
       </FormSection>
 
       {/* ── Job Details ── */}
@@ -432,12 +464,6 @@ export default forwardRef(function FlexoJobCostForm(
       </FormSection>
 
       {/* ── Processing Charges — one table, seven rows ── */}
-      {/* Cover Size carries the company selector (Detail: cover size, Supplier:
-          company) since that company also drives Printing/Gusset/Cutting's
-          rates — it isn't itself a charge, so it gets no toggle and no rate.
-          Printing only needs its own colour count now that company lives on
-          the Cover Size row above it. Gusset and Cutting have no Detail/
-          Supplier of their own; Opack/Punching keep independent suppliers. */}
       <FormSection
         title="Processing Charges"
         icon={<ProcessIcon className="size-3.5" />}
@@ -480,17 +506,6 @@ export default forwardRef(function FlexoJobCostForm(
               disabled={!printingCompanyObj}
             />
           }
-          supplier={
-            <CreatableSelect
-              value={form.printingCompany}
-              onChange={(v) => setField("printingCompany", v)}
-              defaultOptions={companyOptions}
-              placeholder="Select company"
-              creatable={false}
-              persistOptions={false}
-              emptyMessage="No companies found"
-            />
-          }
         />
         <ProcessTableRow
           label="Printing"
@@ -509,6 +524,18 @@ export default forwardRef(function FlexoJobCostForm(
               persistOptions={false}
             />
           }
+          supplier={
+            <CreatableSelect
+              value={form.printingCompany}
+              onChange={(v) => setField("printingCompany", v)}
+              defaultOptions={companyOptions}
+              placeholder="Select company"
+              creatable={false}
+              disabled={!form.items.printing.enabled}
+              persistOptions={false}
+              emptyMessage="No companies found"
+            />
+          }
         />
         <ProcessTableRow
           label="Gusset"
@@ -516,6 +543,18 @@ export default forwardRef(function FlexoJobCostForm(
           onToggle={() => toggleItem("gusset")}
           price={form.items.gusset.price}
           onPriceChange={(v) => setProcessingPrice("gusset", v)}
+          supplier={
+            <CreatableSelect
+              value={form.gussetCompany}
+              onChange={(v) => setField("gussetCompany", v)}
+              defaultOptions={companyOptions}
+              placeholder="Select company"
+              creatable={false}
+              disabled={!form.items.gusset.enabled}
+              persistOptions={false}
+              emptyMessage="No companies found"
+            />
+          }
         />
         <ProcessTableRow
           label="Cutting"
@@ -523,6 +562,18 @@ export default forwardRef(function FlexoJobCostForm(
           onToggle={() => toggleItem("cutting")}
           price={form.items.cutting.price}
           onPriceChange={(v) => setProcessingPrice("cutting", v)}
+          supplier={
+            <CreatableSelect
+              value={form.cuttingCompany}
+              onChange={(v) => setField("cuttingCompany", v)}
+              defaultOptions={companyOptions}
+              placeholder="Select company"
+              creatable={false}
+              disabled={!form.items.cutting.enabled}
+              persistOptions={false}
+              emptyMessage="No companies found"
+            />
+          }
         />
         <ProcessTableRow
           label="Opack"
@@ -585,6 +636,20 @@ export default forwardRef(function FlexoJobCostForm(
           unit="kg"
           width="w-48"
           placeholder="0.00"
+        />
+      </FormSection>
+
+      {/* ── Tax ── */}
+      <FormSection>
+        <SelectField
+          label="Tax"
+          placeholder="18"
+          inline
+          unit="%"
+          storageKey="flexo-job-cost-tax"
+          defaultOptions={["0", "5", "12", "18", "28"]}
+          value={form.tax}
+          onChange={(v) => setField("tax", v)}
         />
       </FormSection>
 

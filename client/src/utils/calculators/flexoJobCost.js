@@ -54,6 +54,11 @@ export function calculateFlexoJobCost(form) {
 
   const costOfJob = dispatchWeight > 0 ? totalAmount / dispatchWeight : null;
 
+  const taxPercent = parseFloat(form.tax) || 0;
+  const taxDivisor = 1 + taxPercent / 100;
+  const costOfJobExclTax = costOfJob != null ? costOfJob / taxDivisor : null;
+  const taxAmountPerKg = costOfJob != null ? costOfJob - costOfJobExclTax : null;
+
   return {
     lineItems,
     enabledItems,
@@ -61,10 +66,13 @@ export function calculateFlexoJobCost(form) {
     finishedWeight,
     dispatchWeight,
     costOfJob,
+    taxPercent,
+    taxAmountPerKg,
+    costOfJobExclTax,
     selectedCompanies: {
       printing: form.printingCompany || null,
-      gusset: form.printingCompany || null,
-      cutting: form.printingCompany || null,
+      gusset: form.gussetCompany || null,
+      cutting: form.cuttingCompany || null,
       opaque: form.opackCompany || null,
       punching: form.punchingCompany || null,
     },
