@@ -299,8 +299,8 @@ export default forwardRef(function GravureForm(
           disabled
           placeholder="Auto-generated"
         />
-        <div>
-          <label className="text-xs font-medium text-label-2 mb-1 block">Customer Name</label>
+        <div className="card-section">
+          <p className="field-label mb-1.5">Customer Name</p>
           <CreatableSelect
             storageKey="customer-names"
             defaultOptions={customerNames}

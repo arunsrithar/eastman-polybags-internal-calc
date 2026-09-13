@@ -166,6 +166,19 @@ export function FlexoSettingsProvider({ children, skip = false }) {
   const [companies, setCompanies] = useState([]);
   const [companiesLoading, setCompaniesLoading] = useState(!skip);
   const [companyCoverSizes, setCompanyCoverSizes] = useState({});
+  const [pendingCoverSizes, _setPendingCoverSizes] = useState(() => {
+    try {
+      const stored = localStorage.getItem("flexo-pending-cover-sizes");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const setPendingCoverSizes = useCallback((updater) => {
+    _setPendingCoverSizes((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem("flexo-pending-cover-sizes", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   const refresh = useCallback(async () => {
     if (skip) return;
@@ -444,6 +457,8 @@ export function FlexoSettingsProvider({ children, skip = false }) {
     restoreCompany,
     permanentDeleteCompany,
     companyCoverSizes,
+    pendingCoverSizes,
+    setPendingCoverSizes,
     fetchCompanyCoverSizes,
     addCompanyCoverSize,
     deleteCompanyCoverSize,

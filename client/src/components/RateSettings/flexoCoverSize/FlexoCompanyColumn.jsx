@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PlusIcon, TrashIcon } from "../../ui/Icons";
 import IOSToggle from "../../ui/IOSToggle";
+import SpotlightSearch from "../../ui/SpotlightSearch";
 
 export default function FlexoCompanyColumn({
   selectedSize,
@@ -38,28 +39,22 @@ export default function FlexoCompanyColumn({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
-        {showAdd && unassignedCompanies.length > 0 ? (
-          <div className="rounded-lg border border-separator/60 bg-background/40 px-3 py-2 mb-2">
-            <p className="text-[11px] text-label-3 mb-1.5">Assign company:</p>
-            <div className="space-y-1">
-              {unassignedCompanies.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className="w-full text-left text-sm text-label hover:bg-fill rounded-md px-2 py-1.5 transition-colors"
-                  onClick={() => {
-                    onAddCompany(c.id);
-                    setShowAdd(false);
-                  }}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
+      <SpotlightSearch
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        onConfirm={(selected) => {
+          selected.forEach((company) => onAddCompany(company.id));
+          setShowAdd(false);
+        }}
+        items={unassignedCompanies}
+        getKey={(c) => c.id}
+        getLabel={(c) => c.name}
+        placeholder="Search companies…"
+        emptyMessage="No matching companies"
+        title="Assign Company"
+      />
 
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
         {!selectedSize ? (
           <div className="card-section text-sm text-label-3">
             Select a cover size first
@@ -75,26 +70,27 @@ export default function FlexoCompanyColumn({
             return (
               <div
                 key={company.id}
-                className={`rounded-lg px-3 py-2 transition-colors ${selected ? "bg-tint/10" : "hover:bg-fill"}`}
+                className={`group rounded-lg px-3 py-2 transition-colors cursor-pointer ${selected ? "bg-tint/10" : "hover:bg-fill"}`}
+                onClick={() => onSelectCompany(company.id)}
               >
                 <div className="flex items-center gap-2">
-                  <IOSToggle
-                    on={enabled}
-                    onToggle={() => onToggleCompany(company.id, !enabled)}
-                    disabled={!canEdit}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => onSelectCompany(company.id)}
-                    className={`text-sm font-medium text-left flex-1 min-w-0 truncate cursor-pointer ${selected ? "text-tint" : enabled ? "text-label" : "text-label-3"}`}
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <IOSToggle
+                      on={enabled}
+                      onToggle={() => onToggleCompany(company.id, !enabled)}
+                      disabled={!canEdit}
+                    />
+                  </span>
+                  <span
+                    className={`text-sm font-medium text-left flex-1 min-w-0 truncate ${selected ? "text-tint" : enabled ? "text-label" : "text-label-3"}`}
                   >
                     {company.name}
-                  </button>
+                  </span>
                   {canEdit ? (
                     <button
                       type="button"
-                      onClick={() => onDeleteCompany(company.id)}
-                      className="table-action-btn text-red-500 hover:bg-red-500/10 shrink-0"
+                      onClick={(e) => { e.stopPropagation(); onDeleteCompany(company.id); }}
+                      className="table-action-btn text-red-500 hover:bg-red-500/10 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       aria-label={`Remove ${company.name}`}
                     >
                       <TrashIcon />

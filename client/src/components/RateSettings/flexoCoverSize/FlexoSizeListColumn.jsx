@@ -1,4 +1,4 @@
-import { CheckIcon, CloseIcon, PlusIcon } from "../../ui/Icons";
+import { CheckIcon, CloseIcon, PlusIcon, TrashIcon } from "../../ui/Icons";
 import { formatDimension } from "../../../utils/dimensionUtils";
 
 export default function FlexoSizeListColumn({
@@ -6,6 +6,7 @@ export default function FlexoSizeListColumn({
   coverSizes,
   selectedSize,
   onSelectSize,
+  onDeleteSize,
   addingSize,
   onStartAdd,
   widthInput,
@@ -84,16 +85,25 @@ export default function FlexoSizeListColumn({
           coverSizes.map((size) => {
             const selected = size === selectedSize;
             return (
-              <button
+              <div
                 key={size}
-                type="button"
                 onClick={() => onSelectSize(size)}
-                className={`w-full text-left rounded-lg px-3 py-2.5 transition-colors cursor-pointer ${selected ? "bg-tint/10 text-tint" : "hover:bg-fill text-label"}`}
+                className={`group rounded-lg px-3 py-2.5 transition-colors cursor-pointer flex items-center gap-2 ${selected ? "bg-tint/10 text-tint" : "hover:bg-fill text-label"}`}
               >
-                <span className="text-sm font-medium truncate">
+                <span className="text-sm font-medium truncate flex-1 min-w-0">
                   {formatDimension(size)}
                 </span>
-              </button>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onDeleteSize(size); }}
+                    className="table-action-btn text-red-500 hover:bg-red-500/10 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={`Remove ${formatDimension(size)}`}
+                  >
+                    <TrashIcon />
+                  </button>
+                ) : null}
+              </div>
             );
           })
         )}

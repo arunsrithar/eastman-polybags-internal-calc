@@ -26,6 +26,8 @@ export default function FlexoCoverSizeTable() {
   const {
     companies,
     companyCoverSizes,
+    pendingCoverSizes,
+    setPendingCoverSizes,
     fetchCompanyCoverSizes,
     addCompanyCoverSize,
     deleteCompanyCoverSize,
@@ -41,7 +43,6 @@ export default function FlexoCoverSizeTable() {
   const [addingSize, setAddingSize] = useState(false);
   const [widthInput, setWidthInput] = useState("");
   const [heightInput, setHeightInput] = useState("");
-  const [addCompanyId, setAddCompanyId] = useState(null);
   const [rateDrafts, setRateDrafts] = useState({});
 
   const activeCompanies = useMemo(
@@ -55,15 +56,24 @@ export default function FlexoCoverSizeTable() {
     }
   }, [activeCompanies, fetchCompanyCoverSizes]);
 
-  const distinctSizes = useMemo(() => {
+  const serverSizes = useMemo(() => {
     const sizeSet = new Set();
     for (const compId of Object.keys(companyCoverSizes)) {
       for (const cs of companyCoverSizes[compId] ?? []) {
         sizeSet.add(cs.coverSize);
       }
     }
-    return [...sizeSet].sort(compareDimensions);
+    return sizeSet;
   }, [companyCoverSizes]);
+
+  useEffect(() => {
+    setPendingCoverSizes((prev) => prev.filter((s) => !serverSizes.has(s)));
+  }, [serverSizes, setPendingCoverSizes]);
+
+  const distinctSizes = useMemo(() => {
+    const merged = new Set([...serverSizes, ...pendingCoverSizes]);
+    return [...merged].sort(compareDimensions);
+  }, [serverSizes, pendingCoverSizes]);
 
   const companiesForSize = useMemo(() => {
     if (!selectedSize) return [];
@@ -99,22 +109,21 @@ export default function FlexoCoverSizeTable() {
     setHeightInput("");
   }
 
-  async function handleAddSize() {
+  function handleAddSize() {
     const width = widthInput.trim();
     const height = heightInput.trim();
     if (!canEdit || !width || !height) return;
     const coverSize = `${width}x${height}`;
-    const companyToAssign = addCompanyId ?? activeCompanies[0]?.id;
-    if (!companyToAssign) return;
-    try {
-      await addCompanyCoverSize(companyToAssign, coverSize);
-      showToast("Cover Size Added", `"${width} x ${height}" added`);
+    if (distinctSizes.includes(coverSize)) {
       setSelectedSize(coverSize);
-      setSelectedCompanyId(companyToAssign);
       closeAddSize();
-    } catch (err) {
-      showToast("Failed to Add", err.message, "error");
+      return;
     }
+    setPendingCoverSizes((prev) => [...prev, coverSize]);
+    showToast("Cover Size Added", `"${width} x ${height}" added`);
+    setSelectedSize(coverSize);
+    setSelectedCompanyId(null);
+    closeAddSize();
   }
 
   function handleSizeInputKeyDown(event) {
@@ -125,6 +134,37 @@ export default function FlexoCoverSizeTable() {
     }
     if (event.key === "Escape") {
       closeAddSize();
+    }
+  }
+
+  async function handleDeleteSize(size) {
+    if (!canEdit) return;
+    if (pendingCoverSizes.includes(size)) {
+      setPendingCoverSizes((prev) => prev.filter((s) => s !== size));
+      if (selectedSize === size) {
+        setSelectedSize(null);
+        setSelectedCompanyId(null);
+      }
+      showToast("Cover Size Removed", `"${size}" removed`);
+      return;
+    }
+    const entries = [];
+    for (const company of activeCompanies) {
+      const csEntries = companyCoverSizes[company.id] ?? [];
+      const entry = csEntries.find((cs) => cs.coverSize === size);
+      if (entry) entries.push({ companyId: company.id, entryId: entry.id });
+    }
+    try {
+      for (const { companyId, entryId } of entries) {
+        await deleteCompanyCoverSize(companyId, entryId);
+      }
+      if (selectedSize === size) {
+        setSelectedSize(null);
+        setSelectedCompanyId(null);
+      }
+      showToast("Cover Size Removed", `"${size}" and all company assignments removed`);
+    } catch (err) {
+      showToast("Delete Failed", err.message, "error");
     }
   }
 
@@ -201,6 +241,7 @@ export default function FlexoCoverSizeTable() {
             setSelectedSize(size);
             setSelectedCompanyId(null);
           }}
+          onDeleteSize={handleDeleteSize}
           addingSize={addingSize}
           onStartAdd={() => setAddingSize(true)}
           widthInput={widthInput}

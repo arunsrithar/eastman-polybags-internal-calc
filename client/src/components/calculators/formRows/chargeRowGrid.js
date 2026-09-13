@@ -10,14 +10,14 @@
  * rather than its own card: Process | Detail | Supplier | Rate.
  */
 export const PROCESS_TABLE_GRID =
-  "grid-cols-[12.5rem_9rem_minmax(0,1fr)_7.5rem]";
+  "grid-cols-[3.5fr_1.5fr_2fr_1.5fr]";
 
 /**
  * Same track without the Rate column, for screens where the calc resolves
  * every rate itself (Flexo Rate Calculator) rather than storing an editable
  * price in form state — showing a column of dashes there isn't worth the width.
  */
-export const PROCESS_TABLE_GRID_NO_RATE = "grid-cols-[12.5rem_9rem_minmax(0,1fr)]";
+export const PROCESS_TABLE_GRID_NO_RATE = "grid-cols-[3.5fr_2fr_3fr]";
 
 export function chargeRowGrid(hasConnector, hasPrice, hasQty = false) {
   if (hasConnector) {
