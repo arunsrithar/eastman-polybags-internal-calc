@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
-import { saveQuote, getQuotes } from "../utils/quoteStorage";
+import { useState, useRef, useEffect } from "react";
+import { saveQuote } from "../utils/quoteStorage";
+import { getNextQuoteId } from "../utils/quotesApi";
 import { useToast } from "../components/ui/Toast";
 
 /**
@@ -27,8 +28,13 @@ export default function useCalculator({
   const [result, setResult] = useState(() => calculateFn(makeInitialForm()));
   const [saveError, setSaveError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [quoteId, setQuoteId] = useState("");
   const formRef = useRef(null);
   const [toast, showToast] = useToast();
+
+  useEffect(() => {
+    getNextQuoteId(calcKey).then(setQuoteId).catch(() => {});
+  }, [calcKey]);
 
   function handleFormChange(formData) {
     setForm(formData);
@@ -51,23 +57,6 @@ export default function useCalculator({
       return;
     }
 
-    // Best-effort client-side dup check (snappier UX). Server enforces
-    // uniqueness via 409, which we still handle below.
-    try {
-      const quotes = await getQuotes(calcKey);
-      const dup = quotes.some(
-        (q) => q.quoteName.trim().toLowerCase() === name.toLowerCase(),
-      );
-      if (dup) {
-        setSaveError(
-          `A quote named "${name}" already exists. Use a different name.`,
-        );
-        return;
-      }
-    } catch {
-      // Couldn't pre-check (offline?) — fall through and let the server decide.
-    }
-
     setSaveError(null);
     setSaving(true);
     try {
@@ -77,16 +66,11 @@ export default function useCalculator({
       );
       showToast(name, toastMessage);
       formRef.current?.reset();
+      getNextQuoteId(calcKey).then(setQuoteId).catch(() => {});
     } catch (err) {
-      if (err?.code === "DUPLICATE" || err?.status === 409) {
-        setSaveError(
-          `A quote named "${name}" already exists. Use a different name.`,
-        );
-      } else {
-        setSaveError(
-          err?.message ? `Couldn't save — ${err.message}` : "Couldn't save — try again.",
-        );
-      }
+      setSaveError(
+        err?.message ? `Couldn't save — ${err.message}` : "Couldn't save — try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -107,6 +91,7 @@ export default function useCalculator({
     saving,
     formRef,
     toast,
+    quoteId,
     handleFormChange,
     handleSave,
     handleReset,

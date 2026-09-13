@@ -8,6 +8,7 @@ import DateField from "../../form/DateField";
 import ItemRow from "../ItemRow";
 import IOSToggle from "../../ui/IOSToggle";
 import CreatableSelect from "../../ui/CreatableSelect";
+import useCustomerNames from "../../../hooks/useCustomerNames";
 import ProcessCountCompanyRow from "../formRows/ProcessCountCompanyRow";
 import ToggleCompanyRow from "../formRows/ToggleCompanyRow";
 import LaminationPillRow from "../formRows/LaminationPillRow";
@@ -113,12 +114,13 @@ function pouchEntrySize(entry) {
 
 /* ─── JobCostForm ────────────────────────────────────────────────────────── */
 export default forwardRef(function JobCostForm(
-  { onProceed, saveError = null },
+  { onProceed, saveError = null, quoteId = "" },
   ref,
 ) {
   const { settings, companies } = useGravureSettings();
   const rates = settings ? buildRatesFromSettings(settings) : null;
 
+  const customerNames = useCustomerNames();
   const [form, setForm] = useState(() => makeInitialForm(rates, settings));
 
   const pendingSyncRef = useRef(null);
@@ -364,15 +366,27 @@ export default forwardRef(function JobCostForm(
 
   return (
     <FormStack>
-      {/* ── Customer & Quote Name ── */}
+      {/* ── Customer & Quote ID ── */}
       <FormSection>
         <TextField
-          label="Customer / Quote Name"
-          placeholder="e.g. Rajesh Traders"
-          value={form.quoteName}
-          onChange={(v) => setField("quoteName", v)}
-          error={saveError}
+          label="Quote ID"
+          value={quoteId}
+          disabled
+          placeholder="Auto-generated"
         />
+        <div>
+          <label className="text-xs font-medium text-label-2 mb-1 block">Customer Name</label>
+          <CreatableSelect
+            storageKey="customer-names"
+            defaultOptions={customerNames}
+            value={form.quoteName}
+            onChange={(v) => setField("quoteName", v)}
+            placeholder="e.g. Rajesh Traders"
+            creatable
+            persistOptions={false}
+          />
+          {saveError && <p className="text-xs text-red-500 mt-1">{saveError}</p>}
+        </div>
       </FormSection>
 
       {/* ── Job Details ── */}

@@ -30,6 +30,7 @@ export default function JobCostCalculator() {
     saveError,
     formRef,
     toast,
+    quoteId,
     handleFormChange,
     handleSave,
     handleReset,
@@ -70,6 +71,7 @@ export default function JobCostCalculator() {
             ref={formRef}
             onProceed={handleFormChange}
             saveError={saveError}
+            quoteId={quoteId}
           />
         </div>
 

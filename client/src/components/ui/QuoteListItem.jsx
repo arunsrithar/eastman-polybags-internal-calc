@@ -31,6 +31,13 @@ export default function QuoteListItem({
         </span>
       </div>
 
+      {/* Quote ID badge */}
+      {quote.quoteId && (
+        <span className="inline-block text-[10px] font-mono font-semibold text-tint bg-tint/10 rounded px-1.5 py-0.5 mt-0.5">
+          {quote.quoteId}
+        </span>
+      )}
+
       {/* Meta row: date + saved by */}
       <div className="flex items-center gap-2 mt-0.5">
         <span className="text-[11px] text-label-3">

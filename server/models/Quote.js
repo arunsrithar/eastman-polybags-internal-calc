@@ -9,6 +9,7 @@ const quoteSchema = new mongoose.Schema(
   {
     _id: { type: String, default: makeQuoteId },
     calcKey: { type: String, required: true, trim: true, index: true },
+    quoteId: { type: String, default: null, trim: true },
     quoteName: { type: String, required: true, trim: true, maxlength: 200 },
     normalizedName: { type: String, required: true },
     pouchSize: { type: String, default: null, trim: true },
@@ -23,8 +24,7 @@ const quoteSchema = new mongoose.Schema(
   },
 );
 
-// Per-calculator unique name (case-insensitive via normalizedName).
-quoteSchema.index({ calcKey: 1, normalizedName: 1 }, { unique: true });
+quoteSchema.index({ calcKey: 1, quoteId: 1 }, { unique: true, sparse: true });
 quoteSchema.index({ calcKey: 1, savedAt: -1 });
 
 const Quote = mongoose.model("Quote", quoteSchema);

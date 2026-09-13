@@ -18,6 +18,15 @@ export async function count(req, res, next) {
   }
 }
 
+export async function nextId(req, res, next) {
+  try {
+    const quoteId = await service.getNextQuoteId(req.params.calcKey);
+    res.json({ quoteId });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function create(req, res, next) {
   try {
     const quote = await service.createQuote(req.params.calcKey, req.body);
@@ -36,6 +45,15 @@ export async function remove(req, res, next) {
         .json({ error: `Quote ${req.params.id} not found` });
     }
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function customers(req, res, next) {
+  try {
+    const names = await service.getDistinctCustomers();
+    res.json(names);
   } catch (err) {
     next(err);
   }

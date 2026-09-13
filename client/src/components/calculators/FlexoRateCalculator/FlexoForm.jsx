@@ -5,6 +5,7 @@ import TextField from "../../form/TextField";
 import RadioField from "../../form/RadioField";
 import SelectField from "../../form/SelectField";
 import CreatableSelect from "../../ui/CreatableSelect";
+import useCustomerNames from "../../../hooks/useCustomerNames";
 import ProcessTableRow from "../formRows/ProcessTableRow";
 import ChargeColumnHeader from "../formRows/ChargeColumnHeader";
 import { PROCESS_TABLE_GRID_NO_RATE } from "../formRows/chargeRowGrid";
@@ -37,9 +38,10 @@ const formatPrintColours = (v) => `${v} Colour`;
 
 /* ─── FlexoForm ──────────────────────────────────────────────────────────── */
 export default forwardRef(function FlexoForm(
-  { onProceed, saveError = null },
+  { onProceed, saveError = null, quoteId = "" },
   ref,
 ) {
+  const customerNames = useCustomerNames();
   const [form, setForm] = useState(() => makeInitialForm());
   const [savingPriceByMaterial, setSavingPriceByMaterial] = useState({});
   const {
@@ -149,12 +151,24 @@ export default forwardRef(function FlexoForm(
       {/* ── Customer ── */}
       <FormSection>
         <TextField
-          label="Customer / Quote Name"
-          placeholder="e.g. Rajesh Traders"
-          value={form.quoteName}
-          onChange={(v) => setField("quoteName", v)}
-          error={saveError}
+          label="Quote ID"
+          value={quoteId}
+          disabled
+          placeholder="Auto-generated"
         />
+        <div>
+          <label className="text-xs font-medium text-label-2 mb-1 block">Customer Name</label>
+          <CreatableSelect
+            storageKey="customer-names"
+            defaultOptions={customerNames}
+            value={form.quoteName}
+            onChange={(v) => setField("quoteName", v)}
+            placeholder="e.g. Rajesh Traders"
+            creatable
+            persistOptions={false}
+          />
+          {saveError && <p className="text-xs text-red-500 mt-1">{saveError}</p>}
+        </div>
       </FormSection>
 
       {/* ── Material ── */}

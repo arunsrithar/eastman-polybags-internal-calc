@@ -73,3 +73,13 @@ export function deleteQuote(calcKey, id) {
     { method: "DELETE" },
   );
 }
+
+export function getNextQuoteId(calcKey) {
+  return request(`${API_BASE}/${encodeURIComponent(calcKey)}/next-id`).then(
+    (body) => body?.quoteId ?? "",
+  );
+}
+
+export function getCustomerNames() {
+  return request(`${API_BASE}/customers`);
+}

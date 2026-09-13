@@ -112,9 +112,13 @@ export default function SavedQuotesView({
   }
 
   const filtered = search.trim()
-    ? quotes.filter((q) =>
-        q.quoteName.toLowerCase().includes(search.trim().toLowerCase()),
-      )
+    ? quotes.filter((q) => {
+        const s = search.trim().toLowerCase();
+        return (
+          q.quoteName.toLowerCase().includes(s) ||
+          (q.quoteId && q.quoteId.toLowerCase().includes(s))
+        );
+      })
     : quotes;
 
   const groups = groupByMonth(filtered);

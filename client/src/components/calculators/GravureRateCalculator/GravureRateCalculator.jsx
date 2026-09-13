@@ -36,6 +36,7 @@ function GravureRateCalculatorInner() {
     saveError,
     formRef,
     toast,
+    quoteId,
     handleFormChange,
     handleSave,
     handleReset,
@@ -76,6 +77,7 @@ function GravureRateCalculatorInner() {
             ref={formRef}
             onProceed={handleFormChange}
             saveError={saveError}
+            quoteId={quoteId}
           />
         </div>
 
