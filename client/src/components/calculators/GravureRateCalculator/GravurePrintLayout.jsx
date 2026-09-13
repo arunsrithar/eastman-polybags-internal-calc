@@ -2,7 +2,7 @@ import { fmt, amountInWords } from "../../../utils/format";
 import { MATERIAL_NAMES } from "../../../constants/gravureRates";
 import PrintInvoice from "../../print/PrintInvoice";
 import { CompanyIcon } from "../../ui/Icons";
-import { isOwnGravureCompany, visibleCompanyName } from "./companyDisplay";
+import { isOwnGravureCompany } from "./companyDisplay";
 import { useAuth } from "../../../context/AuthContext";
 import { getPouchTypeLabel } from "../../../constants/pouchTypes";
 
@@ -56,13 +56,12 @@ export default function GravurePrintLayout({ result, form }) {
   const pouchAmount = Number(pouchCharge ?? pouchRatePerKg ?? 0);
 
   function companySubtitle(name) {
-    const visibleName = visibleCompanyName(name);
-    if (!visibleName) return undefined;
+    if (!name) return undefined;
 
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
         <CompanyIcon className="w-3 h-3" />
-        <span>{visibleName}</span>
+        <span>{name}</span>
       </span>
     );
   }

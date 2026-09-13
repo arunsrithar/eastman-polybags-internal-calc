@@ -1,6 +1,6 @@
 import { amountInWords } from "../../../utils/format";
 import PrintInvoice from "../../print/PrintInvoice";
-import { visibleFlexoCompanyName } from "./companyDisplay";
+import { CompanyIcon } from "../../ui/Icons";
 
 /**
  * FlexoPrintLayout — thin wrapper that maps Flexo result + form data
@@ -44,11 +44,15 @@ export default function FlexoPrintLayout({ result, form }) {
   const roundedTaxAmount = Math.round(taxAmount || 0);
   const roundedTotalRateExclTax = Math.round(totalRateExclTax || 0);
 
-  const printingCompanyName = visibleFlexoCompanyName(selectedCompanies?.printing);
-  const gussetCompanyName = visibleFlexoCompanyName(selectedCompanies?.gusset);
-  const cuttingCompanyName = visibleFlexoCompanyName(selectedCompanies?.cutting);
-  const punchingCompanyName = visibleFlexoCompanyName(selectedCompanies?.punching);
-  const opackCompanyName = visibleFlexoCompanyName(selectedCompanies?.opack);
+  function companySubtitle(name) {
+    if (!name) return undefined;
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+        <CompanyIcon className="w-3 h-3" />
+        <span>{name}</span>
+      </span>
+    );
+  }
 
   /* ── Numbered line items ── */
   const items = [
@@ -89,7 +93,8 @@ export default function FlexoPrintLayout({ result, form }) {
     printingRate > 0
       ? {
           key: "printing",
-          label: `Printing — ${printingColors} Colour${parseInt(printingColors) !== 1 ? "s" : ""}${coverSize ? ` (${coverSize})` : ""}${printingCompanyName ? ` · ${printingCompanyName}` : ""}`,
+          label: `Printing — ${printingColors} Colour${parseInt(printingColors) !== 1 ? "s" : ""}${coverSize ? ` (${coverSize})` : ""}`,
+          subtitle: companySubtitle(selectedCompanies?.printing),
           qty: null,
           price: null,
           amount: printingRate,
@@ -100,7 +105,8 @@ export default function FlexoPrintLayout({ result, form }) {
     gussetRate > 0
       ? {
           key: "gusset",
-          label: `Gusset${gussetCompanyName ? ` · ${gussetCompanyName}` : ""}`,
+          label: "Gusset",
+          subtitle: companySubtitle(selectedCompanies?.gusset),
           qty: null,
           price: null,
           amount: gussetRate,
@@ -111,7 +117,8 @@ export default function FlexoPrintLayout({ result, form }) {
     punchingRate > 0
       ? {
           key: "punching",
-          label: `Punching${punchingCompanyName ? ` · ${punchingCompanyName}` : ""}`,
+          label: "Punching",
+          subtitle: companySubtitle(selectedCompanies?.punching),
           qty: null,
           price: null,
           amount: punchingRate,
@@ -122,7 +129,8 @@ export default function FlexoPrintLayout({ result, form }) {
     opackRate > 0
       ? {
           key: "opack",
-          label: `O-Pack${opackCompanyName ? ` · ${opackCompanyName}` : ""}`,
+          label: "O-Pack",
+          subtitle: companySubtitle(selectedCompanies?.opack),
           qty: null,
           price: null,
           amount: opackRate,
@@ -133,7 +141,8 @@ export default function FlexoPrintLayout({ result, form }) {
     cuttingSizeRate > 0
       ? {
           key: "cutting",
-          label: `Cutting${coverSize ? ` (${coverSize})` : ""}${cuttingCompanyName ? ` · ${cuttingCompanyName}` : ""}`,
+          label: `Cutting${coverSize ? ` (${coverSize})` : ""}`,
+          subtitle: companySubtitle(selectedCompanies?.cutting),
           qty: null,
           price: null,
           amount: cuttingSizeRate,

@@ -1,11 +1,22 @@
 import { fmt, amountInWords } from "../../../utils/format";
 import { formatPrintDate } from "../../print/printTokens";
 import PrintInvoice from "../../print/PrintInvoice";
+import { CompanyIcon } from "../../ui/Icons";
 import { getPouchTypeLabel } from "../../../constants/pouchTypes";
 
 const FLAT_KEYS = new Set(["packingCharges", "transportCharge"]);
 
 /* ─── Charge subtitle builders ───────────────────────────────────────────── */
+
+function companyTag(name) {
+  if (!name) return null;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+      <CompanyIcon className="w-3 h-3" />
+      <span>{name}</span>
+    </span>
+  );
+}
 
 function printingSubtitle(p) {
   if (!p) return undefined;
@@ -18,24 +29,31 @@ function printingSubtitle(p) {
     parts.push(`Metallic — ${p.metallicColorCompany}`);
   if (p.mattFinishCompany)
     parts.push(`Matt Finish — ${p.mattFinishCompany}`);
-  return parts.join("  •  ") || undefined;
+  return parts.length > 0 ? (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+      <CompanyIcon className="w-3 h-3" />
+      <span>{parts.join("  •  ")}</span>
+    </span>
+  ) : undefined;
 }
 
 function laminationSubtitle(l) {
   if (!l) return undefined;
-  return [l.laminationType, l.laminationCompany].filter(Boolean).join(" — ") || undefined;
+  const text = [l.laminationType, l.laminationCompany].filter(Boolean).join(" — ");
+  return text ? companyTag(text) : undefined;
 }
 
 function slittingSubtitle(s) {
-  return s?.slittingCompany || undefined;
+  return s?.slittingCompany ? companyTag(s.slittingCompany) : undefined;
 }
 
 function pouchSubtitle(p) {
   if (!p) return undefined;
   const typeLabel = p.pouchType ? getPouchTypeLabel(p.pouchType) : "";
-  return [p.pouchCompany, p.pouchSize ? `Size: ${p.pouchSize}` : "", typeLabel]
+  const text = [p.pouchCompany, p.pouchSize ? `Size: ${p.pouchSize}` : "", typeLabel]
     .filter(Boolean)
-    .join(" — ") || undefined;
+    .join(" — ");
+  return text ? companyTag(text) : undefined;
 }
 
 const SUBTITLE_BUILDERS = {
